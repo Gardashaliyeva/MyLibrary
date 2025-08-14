@@ -26,6 +26,17 @@
             border-radius: 10px;
             border: 2px solid #e5e7eb;
         }
+        .group-container {
+            margin-bottom: 2rem;
+        }
+        .group-heading {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
@@ -52,7 +63,7 @@
             </div>
             
             <!-- Book list section -->
-            <section id="book-list-container" class="book-list grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[60vh] overflow-y-auto pr-2">
+            <section id="book-list-container" class="book-list max-h-[60vh] overflow-y-auto pr-2">
                 <!-- Book cards will be injected here by JavaScript -->
             </section>
         </main>
@@ -74,6 +85,10 @@
                 <div>
                     <label for="author" class="block text-sm font-medium text-gray-700">Author</label>
                     <input type="text" id="author" name="author" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                </div>
+                <div>
+                    <label for="group" class="block text-sm font-medium text-gray-700">Group/Category</label>
+                    <input type="text" id="group" name="group" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
                 </div>
                 <div>
                     <label for="file" class="block text-sm font-medium text-gray-700">Upload Book (PDF, TXT, etc.)</label>
@@ -167,6 +182,7 @@
         const bookIdInput = document.getElementById('book-id');
         const titleInput = document.getElementById('title');
         const authorInput = document.getElementById('author');
+        const groupInput = document.getElementById('group');
         const fileInput = document.getElementById('file');
         const readerModal = document.getElementById('reader-modal');
         const closeReaderBtn = document.getElementById('close-reader-btn');
@@ -236,6 +252,7 @@
             const id = bookIdInput.value ? parseInt(bookIdInput.value) : null;
             const title = titleInput.value;
             const author = authorInput.value;
+            const group = groupInput.value || "Ungrouped";
             const file = fileInput.files[0];
 
             if (id) {
@@ -249,6 +266,7 @@
                     if (book) {
                         book.title = title;
                         book.author = author;
+                        book.group = group;
                         store.put(book);
                     }
                 };
@@ -273,7 +291,7 @@
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const fileData = event.target.result;
-                    const book = { title, author, content: fileData, fileName: file.name };
+                    const book = { title, author, group, content: fileData, fileName: file.name };
                     
                     const transaction = db.transaction([storeName], 'readwrite');
                     const store = transaction.objectStore(storeName);
@@ -314,28 +332,50 @@
                 const books = event.target.result;
                 const filteredBooks = books.filter(book => 
                     book.title.toLowerCase().includes(filterTerm) || 
-                    book.author.toLowerCase().includes(filterTerm)
+                    book.author.toLowerCase().includes(filterTerm) ||
+                    (book.group && book.group.toLowerCase().includes(filterTerm))
                 );
 
-                if (filteredBooks.length === 0) {
+                // Group books by their 'group' property
+                const groupedBooks = filteredBooks.reduce((acc, book) => {
+                    const group = book.group || "Ungrouped";
+                    if (!acc[group]) {
+                        acc[group] = [];
+                    }
+                    acc[group].push(book);
+                    return acc;
+                }, {});
+
+                // Render each group
+                const sortedGroups = Object.keys(groupedBooks).sort();
+                if (sortedGroups.length === 0) {
                     emptyMessage.classList.remove('hidden');
                 } else {
                     emptyMessage.classList.add('hidden');
-                    filteredBooks.forEach(book => {
-                        const bookCard = `
-                            <div class="book-card bg-gray-50 rounded-xl shadow-md p-4 flex flex-col justify-between transition-all duration-300 ease-in-out hover:shadow-lg">
-                                <div>
-                                    <h3 class="text-xl font-bold text-gray-800 truncate">${book.title}</h3>
-                                    <p class="text-sm text-gray-600 mt-1">by ${book.author}</p>
+                    sortedGroups.forEach(groupName => {
+                        const booksInGroup = groupedBooks[groupName];
+                        let groupHtml = `<div class="group-container">
+                                            <h2 class="group-heading">${groupName}</h2>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">`;
+                        
+                        booksInGroup.forEach(book => {
+                            groupHtml += `
+                                <div class="book-card bg-gray-50 rounded-xl shadow-md p-4 flex flex-col justify-between transition-all duration-300 ease-in-out hover:shadow-lg">
+                                    <div>
+                                        <h3 class="text-xl font-bold text-gray-800 truncate">${book.title}</h3>
+                                        <p class="text-sm text-gray-600 mt-1">by ${book.author}</p>
+                                    </div>
+                                    <div class="mt-4 flex space-x-2">
+                                        <button onclick="readBook(${book.id})" class="flex-1 bg-indigo-500 text-white font-medium py-2 px-4 rounded-full text-sm hover:bg-indigo-600 transition-colors">Read</button>
+                                        <button onclick="editBook(${book.id})" class="flex-1 bg-blue-500 text-white font-medium py-2 px-4 rounded-full text-sm hover:bg-blue-600 transition-colors">Edit</button>
+                                        <button onclick="deleteBook(${book.id})" class="flex-1 bg-red-500 text-white font-medium py-2 px-4 rounded-full text-sm hover:bg-red-600 transition-colors">Remove</button>
+                                    </div>
                                 </div>
-                                <div class="mt-4 flex space-x-2">
-                                    <button onclick="readBook(${book.id})" class="flex-1 bg-indigo-500 text-white font-medium py-2 px-4 rounded-full text-sm hover:bg-indigo-600 transition-colors">Read</button>
-                                    <button onclick="editBook(${book.id})" class="flex-1 bg-blue-500 text-white font-medium py-2 px-4 rounded-full text-sm hover:bg-blue-600 transition-colors">Edit</button>
-                                    <button onclick="deleteBook(${book.id})" class="flex-1 bg-red-500 text-white font-medium py-2 px-4 rounded-full text-sm hover:bg-red-600 transition-colors">Remove</button>
-                                </div>
-                            </div>
-                        `;
-                        bookListContainer.innerHTML += bookCard;
+                            `;
+                        });
+
+                        groupHtml += `</div></div>`;
+                        bookListContainer.innerHTML += groupHtml;
                     });
                 }
             };
@@ -385,6 +425,7 @@
                     bookIdInput.value = book.id;
                     titleInput.value = book.title;
                     authorInput.value = book.author;
+                    groupInput.value = book.group;
                     fileInput.required = false; // File upload is not required for editing
                     bookModal.classList.remove('hidden');
                 }
