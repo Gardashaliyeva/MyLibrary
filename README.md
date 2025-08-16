@@ -20,3 +20,6 @@ This is a single-page web application that functions as a personal, offline-firs
 * **Tailwind CSS**: Used for all styling, ensuring a clean and responsive design.
 * **JavaScript**: Powers the application's logic, including all user interactions and data management.
 * **IndexedDB**: The core technology for persistent, local storage, which makes the app function completely offline.
+
+## Prototype:
+[My Offline Library](https://my-islamic-library.netlify.app/)
