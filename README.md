@@ -21,5 +21,5 @@ This is a single-page web application that functions as a personal, offline-firs
 * **JavaScript**: Powers the application's logic, including all user interactions and data management.
 * **IndexedDB**: The core technology for persistent, local storage, which makes the app function completely offline.
 
-## Prototype:
+## Prototype
 [My Offline Library](https://my-islamic-library.netlify.app/)
