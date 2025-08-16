@@ -22,4 +22,4 @@ This is a single-page web application that functions as a personal, offline-firs
 * **IndexedDB**: The core technology for persistent, local storage, which makes the app function completely offline.
 
 ## Prototype
-[My Offline Library](https://my-islamic-library.netlify.app/)
+[My Offline Library App](https://my-islamic-library.netlify.app/)
